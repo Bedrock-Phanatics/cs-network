@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CsNetwork/CsNetwork.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CsNetwork.Tests/CsNetwork.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/CsNetwork.Benchmarks/CsNetwork.Benchmarks.csproj" />
+  </Folder>
+</Solution>
