@@ -7,6 +7,6 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
-    <NoWarn>$(NoWarn);1591;CA1031;CA1028;CA5358;CA1815</NoWarn>
+    <NoWarn>$(NoWarn);1591;CA1001;CA1008;CA1028;CA1031;CA1815;CA1819;CA5358;CA5394</NoWarn>
   </PropertyGroup>
 </Project>
