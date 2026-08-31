@@ -11,13 +11,14 @@ public class CryptoBenchmarks
     private byte[] _salt = null!;
     private byte[] _sharedSecret = null!;
     private byte[] _plaintext = null!;
-    private byte[] _ciphertext = null!;
     private byte[] _destination = null!;
     private byte[] _rawBatch = null!;
     private byte[] _encryptedBatch = null!;
     private BedrockCipherSession _senderSession = null!;
     private BedrockCipherSession _receiverSession = null!;
     private AesCtrCipher _aesCtr = null!;
+    private EcdhKeyPair _ecdh1 = null!;
+    private byte[] _ecdh2PublicKey = null!;
 
     [GlobalSetup]
     public void Setup()
@@ -37,19 +38,19 @@ public class CryptoBenchmarks
         _senderSession = new BedrockCipherSession(_key);
         _receiverSession = new BedrockCipherSession(_key);
 
-        _ciphertext = new byte[_plaintext.Length + BedrockCipherSession.ChecksumLength];
-        _senderSession.Encrypt(_plaintext, _ciphertext);
-
         _rawBatch = new byte[1025];
         _rawBatch[0] = 0xFE;
         _plaintext.CopyTo(_rawBatch.AsSpan(1));
 
         _encryptedBatch = new byte[_rawBatch.Length + BedrockCipherSession.ChecksumLength];
-        _senderSession.EncryptBatch(_rawBatch, _encryptedBatch);
 
         Span<byte> iv = stackalloc byte[16];
         BedrockKdf.DeriveIv(_key, iv);
         _aesCtr = new AesCtrCipher(_key, iv);
+
+        _ecdh1 = EcdhKeyPair.Create();
+        using var ecdh2 = EcdhKeyPair.Create();
+        _ecdh2PublicKey = ecdh2.GetUncompressedPublicKey();
     }
 
     [GlobalCleanup]
@@ -58,6 +59,7 @@ public class CryptoBenchmarks
         _senderSession.Dispose();
         _receiverSession.Dispose();
         _aesCtr.Dispose();
+        _ecdh1.Dispose();
     }
 
     [Benchmark]
@@ -75,21 +77,22 @@ public class CryptoBenchmarks
     }
 
     [Benchmark]
+    public void EcdhCreate()
+    {
+        using var key = EcdhKeyPair.Create();
+    }
+
+    [Benchmark]
+    public bool EcdhDeriveSharedSecret()
+    {
+        Span<byte> secret = stackalloc byte[48];
+        return _ecdh1.TryDeriveSharedSecret(_ecdh2PublicKey, secret, out _);
+    }
+
+    [Benchmark]
     public void AesCtrTransform1KB()
     {
         _aesCtr.Transform(_plaintext, _destination);
-    }
-
-    [Benchmark]
-    public int SessionEncryptPayload()
-    {
-        return _senderSession.Encrypt(_plaintext, _destination);
-    }
-
-    [Benchmark]
-    public bool SessionDecryptPayload()
-    {
-        return _receiverSession.TryDecrypt(_ciphertext, _destination, out _);
     }
 
     [Benchmark]
@@ -99,8 +102,9 @@ public class CryptoBenchmarks
     }
 
     [Benchmark]
-    public bool SessionDecryptBatch()
+    public bool SessionRoundtripBatch()
     {
-        return _receiverSession.TryDecryptBatch(_encryptedBatch, _destination, out _);
+        int written = _senderSession.EncryptBatch(_rawBatch, _encryptedBatch);
+        return _receiverSession.TryDecryptBatch(_encryptedBatch.AsSpan(0, written), _destination, out _);
     }
 }

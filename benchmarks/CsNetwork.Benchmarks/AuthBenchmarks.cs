@@ -31,6 +31,12 @@ public class AuthBenchmarks
             Guid.NewGuid(),
             ecdh,
             skin);
+
+        if (!JwtToken.TryVerifyEs384(_jwtToken, _ecdsaKey, out _))
+            throw new InvalidOperationException("Failed to verify benchmark setup JWT token.");
+
+        if (!LoginRequest.TryParse(_offlineLoginPayload, out _, out string? err))
+            throw new InvalidOperationException($"Failed to parse benchmark setup login request: {err}");
     }
 
     [GlobalCleanup]
