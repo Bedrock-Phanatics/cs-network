@@ -31,6 +31,12 @@ public static class MojangChainValidator
             return false;
         }
 
+        if (chainJwtTokens.Count != 1 && chainJwtTokens.Count != 3)
+        {
+            error = $"Unsupported certificate chain length {chainJwtTokens.Count}. Expected 1 or 3.";
+            return false;
+        }
+
         if (chainJwtTokens.Count > MaxChainLength)
         {
             error = $"Certificate chain exceeds maximum allowed length of {MaxChainLength} tokens.";
@@ -136,11 +142,17 @@ public static class MojangChainValidator
         isXboxLiveAuthenticated = false;
         error = null;
 
+        if (tokens.Count != 3)
+        {
+            error = $"Unsupported online certificate chain length {tokens.Count}. Expected 3 tokens.";
+            return false;
+        }
+
         // token 0
         if (!ExtractHeaderX5u(tokens[0], out string? rootX5uB64, out error))
             return false;
 
-        isXboxLiveAuthenticated = MojangKeys.IsMojangRootKey(rootX5uB64);
+        bool isRootKey = MojangKeys.IsMojangRootKey(rootX5uB64);
 
         using var rootKey = JwtToken.ImportPublicKey(rootX5uB64);
         if (!JwtToken.TryVerifyEs384(tokens[0], rootKey, out string? payload0Json))
@@ -168,13 +180,6 @@ public static class MojangChainValidator
         if (!ValidateTokenClaims(doc1.RootElement, out error))
             return false;
 
-        if (tokens.Count == 2)
-        {
-            if (!TryExtractIdentityAndClientKey(payload1Json, out identity, out clientPublicKey, out error))
-                return false;
-            return true;
-        }
-
         if (!ExtractIdentityPublicKey(payload1Json, out string? key2SpkiB64, out error))
             return false;
 
@@ -193,6 +198,8 @@ public static class MojangChainValidator
         if (!TryExtractIdentityAndClientKey(payload2Json, out identity, out clientPublicKey, out error))
             return false;
 
+        // only set on final success
+        isXboxLiveAuthenticated = isRootKey;
         return true;
     }
 

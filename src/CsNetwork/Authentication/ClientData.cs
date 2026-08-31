@@ -42,9 +42,9 @@ public sealed record ClientData(
             return false;
         }
 
-        if (UIProfile is not (0 or 1))
+        if (UIProfile is < 0 or > 2)
         {
-            error = $"UIProfile value {UIProfile} is out of valid range [0, 1].";
+            error = $"UIProfile value {UIProfile} is out of valid range [0, 2].";
             return false;
         }
 

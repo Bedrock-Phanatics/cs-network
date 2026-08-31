@@ -132,8 +132,12 @@ public sealed class ChainValidationTests
         }
     }
 
-    [Fact]
-    public void ValidateChain_ExceedsMaxChainLength_Fails()
+    [Theory]
+    [InlineData(2)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    public void ValidateChain_UnsupportedChainLength_Fails(int count)
     {
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP384);
         string spki = JwtToken.ExportPublicKey(ecdsa);
@@ -141,17 +145,18 @@ public sealed class ChainValidationTests
         string payloadJson = $"{{\"identityPublicKey\":\"{spki}\"}}";
         string token = JwtToken.SignEs384(headerJson, payloadJson, ecdsa);
 
-        string[] longChain = [token, token, token, token, token, token]; // 6 tokens > MaxChainLength (5)
+        string[] chain = new string[count];
+        Array.Fill(chain, token);
 
         bool success = MojangChainValidator.TryValidateChain(
-            longChain,
+            chain,
             out _,
             out _,
             out _,
             out string? error);
 
         Assert.False(success);
-        Assert.Contains("exceeds maximum allowed length", error, StringComparison.Ordinal);
+        Assert.NotNull(error);
     }
 
     [Fact]
